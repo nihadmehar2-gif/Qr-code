@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand colors -->
+    <color name="brand_primary">#3B6BFF</color>
+    <color name="brand_primary_dark">#1E3FCC</color>
+    <color name="brand_secondary">#7B61FF</color>
+    <color name="brand_accent">#FF6B9D</color>
+
+    <!-- Light theme surfaces -->
+    <color name="bg_light">#F7F8FB</color>
+    <color name="surface_light">#FFFFFF</color>
+    <color name="text_primary_light">#0F1222</color>
+    <color name="text_secondary_light">#5A6175</color>
+    <color name="divider_light">#E6E8EF</color>
+
+    <!-- Dark theme surfaces -->
+    <color name="bg_dark">#0F1117</color>
+    <color name="surface_dark">#1A1D27</color>
+    <color name="surface_variant_dark">#222633</color>
+    <color name="text_primary_dark">#F2F4FB</color>
+    <color name="text_secondary_dark">#A2A8BE</color>
+    <color name="divider_dark">#2A2F3D</color>
+
+    <!-- Status -->
+    <color name="success">#19B36A</color>
+    <color name="warning">#F5A623</color>
+    <color name="danger">#E5484D</color>
+
+    <!-- Scanner overlay -->
+    <color name="scanner_mask">#80000000</color>
+    <color name="scanner_frame">#FFFFFFFF</color>
+
+    <!-- QR Generator default -->
+    <color name="qr_default_fg">#0F1222</color>
+    <color name="qr_default_bg">#FFFFFF</color>
+
+    <!-- Launcher background -->
+    <color name="launcher_background">#3B6BFF</color>
+</resources>

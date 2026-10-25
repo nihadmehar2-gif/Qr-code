@@ -1,0 +1,25 @@
+# Build outputs
+build/
+*.apk
+*.aab
+
+# Gradle
+.gradle/
+gradle/caches/
+
+# Local config (paths to SDK)
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+build.log
+build.pid

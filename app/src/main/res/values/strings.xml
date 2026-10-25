@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">QR Scanner &amp; Generator</string>
+
+    <!-- Home -->
+    <string name="home_title">QR Scanner &amp; Generator</string>
+    <string name="home_subtitle">Scan, generate, and manage QR codes</string>
+    <string name="action_scan_camera">Scan with Camera</string>
+    <string name="action_scan_gallery">Scan from Gallery</string>
+    <string name="action_generate">Generate QR Code</string>
+    <string name="action_history">Scan History</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_home">Home</string>
+    <string name="nav_generate">Generate</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Permissions -->
+    <string name="permission_camera_rationale">Camera permission is required to scan QR codes live with your camera. The camera feed is processed on-device and never sent to any server.</string>
+    <string name="permission_gallery_rationale">Gallery access is required to pick an image and decode a QR code from it. The selected image is processed on-device only.</string>
+    <string name="permission_camera_denied">Camera permission was denied. Please grant it from Settings to scan QR codes with the camera.</string>
+    <string name="permission_gallery_denied">Storage permission was denied. Please grant it from Settings to scan QR codes from gallery images.</string>
+    <string name="permission_request">Request permission</string>
+    <string name="permission_open_settings">Open app settings</string>
+
+    <!-- Scanner -->
+    <string name="scanner_hint">Point your camera at a QR code</string>
+    <string name="scanner_torch_off">Flashlight off</string>
+    <string name="scanner_torch_on">Flashlight on</string>
+    <string name="scanner_switch_camera">Switch camera</string>
+    <string name="scanner_close">Close scanner</string>
+    <string name="scanner_init_failed">Camera initialization failed. Please try again or restart the app.</string>
+    <string name="scanner_no_qr_in_image">No QR code found in the selected image. Try a clearer photo.</string>
+    <string name="scanner_please_wait">Please wait…</string>
+
+    <!-- QR types -->
+    <string name="type_unknown">Unknown</string>
+    <string name="type_text">Text</string>
+    <string name="type_url">Website</string>
+    <string name="type_wifi">Wi-Fi</string>
+    <string name="type_vcard">Contact</string>
+    <string name="type_phone">Phone number</string>
+    <string name="type_email">Email</string>
+    <string name="type_sms">SMS</string>
+    <string name="type_geo">Location</string>
+    <string name="type_calendar">Calendar event</string>
+    <string name="type_crypto">Crypto</string>
+
+    <!-- Result actions -->
+    <string name="action_open_url">Open website</string>
+    <string name="action_copy_link">Copy link</string>
+    <string name="action_copy_text">Copy text</string>
+    <string name="action_share_text">Share text</string>
+    <string name="action_copy_name">Copy name</string>
+    <string name="action_copy_phone">Copy phone</string>
+    <string name="action_copy_email">Copy email</string>
+    <string name="action_copy_password">Copy password</string>
+    <string name="action_copy_ssid">Copy network name</string>
+    <string name="action_connect_wifi">Connect to Wi-Fi</string>
+    <string name="action_call">Call</string>
+    <string name="action_send_email">Send email</string>
+    <string name="action_send_sms">Send SMS</string>
+    <string name="action_view_map">View on map</string>
+    <string name="action_navigate">Navigate</string>
+    <string name="action_save_contact">Save contact</string>
+    <string name="action_add_to_calendar">Add to calendar</string>
+    <string name="action_copy_message">Copy message</string>
+    <string name="action_share_qr">Share QR code</string>
+    <string name="action_save_gallery">Save to gallery</string>
+    <string name="action_favorite">Favorite</string>
+    <string name="action_unfavorite">Unfavorite</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_share">Share</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_open_wifi_settings">Open Wi-Fi settings</string>
+
+    <!-- Toasts -->
+    <string name="toast_copied">Copied successfully</string>
+    <string name="toast_copied_password">Password copied successfully</string>
+    <string name="toast_copied_name">Name copied successfully</string>
+    <string name="toast_saved_to_gallery">Saved to gallery</string>
+    <string name="toast_save_failed">Failed to save image</string>
+    <string name="toast_no_qr_detected">No QR code detected</string>
+    <string name="toast_unsafe_link_warning">This link looks suspicious. Open it carefully.</string>
+    <string name="toast_wifi_connect_unavailable">Direct Wi-Fi connection is not supported on this device. Please connect manually using the copied credentials.</string>
+    <string name="toast_no_maps_app">No maps application is installed.</string>
+    <string name="toast_no_dialer">No phone dialer is available.</string>
+    <string name="toast_no_email_app">No email application is available.</string>
+    <string name="toast_no_sms_app">No SMS application is available.</string>
+    <string name="toast_no_contacts_app">No contacts application is available.</string>
+    <string name="toast_no_calendar_app">No calendar application is available.</string>
+    <string name="toast_no_browser">No browser is available.</string>
+    <string name="toast_history_cleared">History cleared</string>
+    <string name="toast_item_deleted">Item deleted</string>
+    <string name="toast_invalid_input">Please fill all required fields correctly.</string>
+
+    <!-- Wi-Fi instructions -->
+    <string name="wifi_instruction_title">Connect manually</string>
+    <string name="wifi_instruction_message">Android no longer allows apps to connect to Wi-Fi automatically. We\'ve opened the system Wi-Fi screen for you — tap the network \"%1$s\", enter the password (already copied to your clipboard), and tap Connect.</string>
+
+    <!-- Generator -->
+    <string name="generator_title">Generate QR Code</string>
+    <string name="generator_type_text">Text</string>
+    <string name="generator_type_url">URL</string>
+    <string name="generator_type_wifi">Wi-Fi</string>
+    <string name="generator_type_phone">Phone</string>
+    <string name="generator_type_email">Email</string>
+    <string name="generator_type_sms">SMS</string>
+    <string name="generator_type_vcard">Contact</string>
+    <string name="gen_field_text">Text content</string>
+    <string name="gen_field_url">Website URL (https://…)</string>
+    <string name="gen_field_ssid">Network name (SSID)</string>
+    <string name="gen_field_password">Password</string>
+    <string name="gen_field_security">Security</string>
+    <string name="gen_field_hidden">Hidden network</string>
+    <string name="gen_field_phone">Phone number</string>
+    <string name="gen_field_email">Email address</string>
+    <string name="gen_field_subject">Subject</string>
+    <string name="gen_field_body">Message</string>
+    <string name="gen_field_name">Full name</string>
+    <string name="gen_field_sms_number">Recipient phone</string>
+    <string name="gen_field_sms_message">SMS message</string>
+    <string name="gen_color_foreground">Foreground color</string>
+    <string name="gen_color_background">Background color</string>
+    <string name="gen_generate">Generate QR code</string>
+    <string name="gen_save">Save to gallery</string>
+    <string name="gen_share">Share QR code</string>
+    <string name="gen_placeholder">Fill the fields above and tap Generate to preview your QR code.</string>
+    <string name="gen_security_wep">WEP</string>
+    <string name="gen_security_wpa">WPA/WPA2/WPA3</string>
+    <string name="gen_security_none">No password</string>
+
+    <!-- History -->
+    <string name="history_title">Scan history</string>
+    <string name="history_empty_title">No scans yet</string>
+    <string name="history_empty_subtitle">Your scanned QR codes will appear here. Nothing is uploaded — all history is stored locally on this device.</string>
+    <string name="history_favorites_tab">Favorites</string>
+    <string name="history_all_tab">All</string>
+    <string name="history_clear_all">Clear all history</string>
+    <string name="history_clear_confirm_title">Clear all history?</string>
+    <string name="history_clear_confirm_message">This will permanently delete all scanned QR codes (including favorites) from this device. This cannot be undone.</string>
+    <string name="history_delete_confirm_message">Delete this scan from history?</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete_permanently">Delete</string>
+    <string name="action_clear">Clear</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_dark_mode">Dark mode</string>
+    <string name="settings_dark_mode_system">Follow system</string>
+    <string name="settings_dark_mode_on">Always on</string>
+    <string name="settings_dark_mode_off">Always off</string>
+    <string name="settings_scan">Scanning</string>
+    <string name="settings_beep_on_scan">Beep on scan</string>
+    <string name="settings_vibrate_on_scan">Vibrate on scan</string>
+    <string name="settings_open_result_auto">Open result automatically</string>
+    <string name="settings_save_history">Save scan history</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_privacy_note">Privacy</string>
+    <string name="settings_privacy_summary">All QR scanning and generation happens on-device. Your scanned passwords, contacts, and other private data never leave your phone.</string>
+    <string name="settings_open_source_licenses">Open source licenses</string>
+    <string name="settings_clear_cache">Clear QR code cache</string>
+
+    <!-- Wi-Fi card -->
+    <string name="wifi_ssid">Network name</string>
+    <string name="wifi_security">Security</string>
+    <string name="wifi_password">Password</string>
+    <string name="wifi_hidden">Hidden</string>
+    <string name="wifi_open">(open network)</string>
+    <string name="wifi_unknown_password">Unknown</string>
+
+    <!-- Result sheet -->
+    <string name="result_title">Scan result</string>
+    <string name="result_open_again">Scan again</string>
+    <string name="result_close">Close</string>
+
+    <!-- Misc -->
+    <string name="ok">OK</string>
+    <string name="back">Back</string>
+    <string name="loading">Loading…</string>
+    <string name="content_desc_qr_preview">Generated QR code preview</string>
+    <string name="content_desc_camera_preview">Camera preview</string>
+    <string name="content_desc_qr_frame">QR code scan frame</string>
+</resources>

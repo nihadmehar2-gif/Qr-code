@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/camera_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/content_desc_camera_preview"
+        app:scaleType="fillCenter" />
+
+    <!-- Scan overlay: dark mask with transparent frame in the middle -->
+    <FrameLayout
+        android:id="@+id/scanner_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/scanner_mask" />
+
+        <com.qrcode.scanner.ui.scanner.ScannerFrameView
+            android:id="@+id/scanner_frame"
+            android:layout_width="@dimen/scanner_frame_size"
+            android:layout_height="@dimen/scanner_frame_size"
+            android:layout_gravity="center"
+            android:contentDescription="@string/content_desc_qr_frame" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/scanner_hint"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:text="@string/scanner_hint"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_close"
+        style="@style/Widget.Material3.Button.IconButton.Filled"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="24dp"
+        android:contentDescription="@string/scanner_close"
+        app:icon="@drawable/ic_close"
+        app:iconTint="@android:color/white"
+        app:backgroundTint="#66000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/bottom_controls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="48dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_torch"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:contentDescription="@string/scanner_torch_on"
+            app:icon="@drawable/ic_flash_on"
+            app:iconTint="@android:color/white"
+            app:backgroundTint="#66000000"
+            android:layout_marginEnd="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_switch_camera"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:contentDescription="@string/scanner_switch_camera"
+            app:icon="@drawable/ic_camera_switch"
+            app:iconTint="@android:color/white"
+            app:backgroundTint="#66000000" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/gallery_loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/scanner_please_wait"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
