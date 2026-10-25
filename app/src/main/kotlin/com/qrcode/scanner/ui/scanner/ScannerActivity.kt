@@ -56,6 +56,7 @@ class ScannerActivity : AppCompatActivity() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var preview: Preview? = null
     private var imageAnalysis: ImageAnalysis? = null
+    private var boundCamera: androidx.camera.core.Camera? = null
     private var cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
     private var torchEnabled = false
     private var isPausedForResult = false
@@ -169,8 +170,12 @@ class ScannerActivity : AppCompatActivity() {
                         }
                     }
                 cameraProvider?.unbindAll()
-                cameraProvider?.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
-                // Set torch initial state on the camera (after binding).
+                // Keep a reference to the bound Camera so we can toggle the torch later
+                // without re-binding (re-binding throws IllegalStateException).
+                boundCamera = null
+                boundCamera = cameraProvider?.bindToLifecycle(
+                    this, cameraSelector, preview, imageAnalysis
+                )
                 applyTorchState()
             } catch (e: Exception) {
                 binding.scannerHint.text = getString(R.string.scanner_init_failed)
@@ -232,9 +237,17 @@ class ScannerActivity : AppCompatActivity() {
             if (torchEnabled) R.color.warning else android.R.color.white)
     }
 
+    /**
+     * Apply the current [torchEnabled] state to the bound Camera.
+     *
+     * IMPORTANT: we must NOT call `cameraProvider.bindToLifecycle(...)` here again — doing so
+     * throws `IllegalStateException: Use cases can only be bound to a single lifecycle owner`
+     * because the camera is already bound to this Activity's lifecycle. We use the
+     * [boundCamera] reference captured at bind time instead.
+     */
     private fun applyTorchState() {
-        val camera = cameraProvider?.bindToLifecycle(this, cameraSelector)
-        if (camera != null && camera.cameraInfo.hasFlashUnit()) {
+        val camera = boundCamera ?: return
+        if (camera.cameraInfo.hasFlashUnit()) {
             camera.cameraControl.enableTorch(torchEnabled)
         }
     }
@@ -352,6 +365,7 @@ class ScannerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        boundCamera = null
         cameraProvider?.unbindAll()
         analysisExecutor.shutdown()
     }
