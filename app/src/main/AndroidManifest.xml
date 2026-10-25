@@ -26,11 +26,55 @@
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="false" />
+    <!--
+        Plain android.hardware.camera is implied as REQUIRED by the CAMERA permission
+        (unless explicitly marked optional). Fire TV Stick / Cube have no camera at all,
+        so this implied-required feature would filter them out of the Amazon Appstore.
+        Marking it optional lets the app install on Fire TV (where the user can still
+        use Gallery scan + QR generator) while still requesting CAMERA permission on
+        devices that do have a camera (where the live scanner works).
+    -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.camera.autofocus"
         android:required="false" />
     <uses-feature
         android:name="android.hardware.camera.flash"
+        android:required="false" />
+    <!--
+        Mark implied-required features as optional so that Amazon Fire TV (no camera, no GPS,
+        no telephony), Fire Tablets without cellular, and Android Automotive head units
+        without Wi-Fi can install the app from the Amazon Appstore.
+
+        Without these declarations:
+          - CALL_PHONE implies android.hardware.telephony (filters out Fire TV + Fire Tablets
+            without cellular modems, since most Fire devices are Wi-Fi only).
+          - ACCESS_FINE_LOCATION implies android.hardware.location.gps +
+            android.hardware.location (filters out Fire TV, which has no GPS).
+          - CHANGE_WIFI_STATE / ACCESS_WIFI_STATE imply android.hardware.wifi (filters out
+            Android Automotive head units and any device without a Wi-Fi radio).
+
+        The app's core features (QR generation, gallery scan, history, settings) work without
+        any of these — only camera-based scanning, Wi-Fi QR connect, and Call/SMS actions
+        require them, and those features already degrade gracefully at runtime (the user gets
+        a clear error if the feature is missing).
+    -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.network"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.wifi"
         android:required="false" />
 
     <application
