@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.qrcode.scanner"
+    namespace = "com.nihadmehar.qrscanner"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.qrcode.scanner"
+        applicationId = "com.nihadmehar.qrscanner"
         minSdk = 23
         targetSdk = 34
         versionCode = 1

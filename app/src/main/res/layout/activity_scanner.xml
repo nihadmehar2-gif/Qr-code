@@ -25,7 +25,7 @@
             android:layout_height="match_parent"
             android:background="@color/scanner_mask" />
 
-        <com.qrcode.scanner.ui.scanner.ScannerFrameView
+        <com.nihadmehar.qrscanner.ui.scanner.ScannerFrameView
             android:id="@+id/scanner_frame"
             android:layout_width="@dimen/scanner_frame_size"
             android:layout_height="@dimen/scanner_frame_size"

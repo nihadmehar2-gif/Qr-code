@@ -6,18 +6,18 @@
 
     <fragment
         android:id="@+id/nav_home"
-        android:name="com.qrcode.scanner.ui.home.HomeFragment"
+        android:name="com.nihadmehar.qrscanner.ui.home.HomeFragment"
         android:label="@string/home_title" />
     <fragment
         android:id="@+id/nav_generate"
-        android:name="com.qrcode.scanner.ui.generator.GeneratorFragment"
+        android:name="com.nihadmehar.qrscanner.ui.generator.GeneratorFragment"
         android:label="@string/generator_title" />
     <fragment
         android:id="@+id/nav_history"
-        android:name="com.qrcode.scanner.ui.history.HistoryFragment"
+        android:name="com.nihadmehar.qrscanner.ui.history.HistoryFragment"
         android:label="@string/history_title" />
     <fragment
         android:id="@+id/nav_settings"
-        android:name="com.qrcode.scanner.ui.settings.SettingsFragment"
+        android:name="com.nihadmehar.qrscanner.ui.settings.SettingsFragment"
         android:label="@string/settings_title" />
 </navigation>
