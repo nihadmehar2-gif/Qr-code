@@ -197,41 +197,40 @@ class ScannerActivity : AppCompatActivity() {
             imageProxy.close()
             return
         }
-        val mediaImage = imageProxy.image
-        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-        if (mediaImage == null) {
-            imageProxy.close()
-            return
-        }
-
-        // IMPORTANT: CameraX's ImageAnalysis contract requires that we close
-        // imageProxy ourselves, AND that we read the Image's planes on the
-        // analyzer thread (the buffer is owned by this thread). The ML Kit
-        // call itself is async and runs on ML Kit's internal executor, so
-        // we MUST copy the Y-plane bytes out on THIS thread before dispatching
-        // to a background coroutine.
-        //
-        // We do that in QrDecoder.copyYuvBytes() below — it returns a small
-        // data class that holds the byte arrays + dimensions, with NO
-        // references to the original Image. Then we close imageProxy on the
-        // analyzer thread, then launch a background coroutine to feed the
-        // bytes to ML Kit.
-        val yuvData = try {
-            QrDecoder.copyYuvBytes(mediaImage)
-        } catch (e: Exception) {
-            imageProxy.close()
-            return
-        }
-        imageProxy.close()
-
-        if (yuvData == null) return
+        // Snapshot rotation now, before ML Kit reads it — imageProxy.imageInfo
+        // is owned by the analyzer thread.
+        // We pass the imageProxy to QrDecoder.decodeImageProxy(), which TAKES
+        // OWNERSHIP of closing it. ML Kit's InputImage.fromMediaImage holds a
+        // reference to imageProxy.image until its async Task completes, so we
+        // must NOT close imageProxy ourselves — decodeImageProxy does it in
+        // a finally block.
 
         lifecycleScope.launch(Dispatchers.Default) {
-            val raw = QrDecoder.decodeYuvBytes(yuvData, rotationDegrees)
+            val raw = try {
+                QrDecoder.decodeImageProxy(imageProxy)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Coroutine was cancelled (e.g. activity destroyed) — QrDecoder
+                // still closed the imageProxy in its finally block. Just bail.
+                throw e
+            } catch (e: Exception) {
+                // Any other unexpected error — log and bail. QrDecoder already
+                // closed the imageProxy in its finally block.
+                android.util.Log.w("ScannerActivity", "decodeImageProxy failed", e)
+                null
+            }
             if (raw != null) {
                 val parsed = QrTypeDetector.detect(raw)
                 withContext(Dispatchers.Main) {
-                    if (!isPausedForResult) {
+                    // Triple-guard against duplicate sheet shows:
+                    //   1. isPausedForResult (already set if a sheet is open)
+                    //   2. findFragmentByTag(TAG) != null (defensive in case the
+                    //      flag was reset but the sheet wasn't dismissed yet)
+                    //   3. lifecycle.currentState.isAtLeast(STARTED) — only
+                    //      publish if the activity is still alive
+                    if (!isPausedForResult
+                        && supportFragmentManager.findFragmentByTag(ResultBottomSheet.TAG) == null
+                        && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+                    ) {
                         viewModel.publishResult(parsed)
                         runFeedback()
                     }

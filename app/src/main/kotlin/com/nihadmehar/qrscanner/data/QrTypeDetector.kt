@@ -1,7 +1,5 @@
 package com.nihadmehar.qrscanner.data
 
-import android.net.Uri
-
 /**
  * Detected QR content types and parsed payloads.
  *
@@ -18,6 +16,13 @@ import android.net.Uri
  *   - Calendar:  BEGIN:VCALENDAR / VEVENT / END:VCALENDAR  (or BEGIN:VEVENT)
  *
  * Anything else falls back to plain text.
+ *
+ * NOTE: this class deliberately does NOT depend on android.net.Uri so that
+ * the parsing logic can be unit-tested on the JVM (no Robolectric needed).
+ * The [percentDecode] helper below is a tiny URL-decoder that mirrors
+ * android.net.percentDecode() behavior (specifically: '+' is preserved as '+',
+ * not converted to space — that matches the de-facto QR-scanner convention
+ * for mailto / sms subjects).
  */
 sealed class QrContent {
     abstract val raw: String
@@ -155,7 +160,7 @@ object QrTypeDetector {
         val lower = raw.lowercase()
         when {
             lower.startsWith("tel:") -> {
-                val num = Uri.decode(raw.substring(4).trim())
+                val num = percentDecode(raw.substring(4).trim())
                 return QrContent.Phone(raw, num)
             }
             lower.startsWith("mailto:") -> return parseMailto(raw)
@@ -359,7 +364,7 @@ object QrTypeDetector {
     private fun parseMailto(raw: String): QrContent.Email {
         val body = raw.substring(7)
         val toAndQuery = if (body.contains('?')) body.substringBefore('?') else body
-        val address = Uri.decode(toAndQuery).trim()
+        val address = percentDecode(toAndQuery).trim()
         val params = parseQuery(body.substringAfter('?', ""))
         return QrContent.Email(
             raw = raw,
@@ -400,7 +405,7 @@ object QrTypeDetector {
         val body = raw.substring(4)
         val to = if (body.contains('?')) body.substringBefore('?') else body
         val params = parseQuery(body.substringAfter('?', ""))
-        val number = Uri.decode(to).trim()
+        val number = percentDecode(to).trim()
         return QrContent.Sms(raw = raw, number = number, message = params["body"])
     }
 
@@ -410,7 +415,7 @@ object QrTypeDetector {
         val pieces = body.split(':', limit = 2)
         return QrContent.Sms(
             raw = raw,
-            number = Uri.decode(pieces.getOrNull(0).orEmpty()).trim(),
+            number = percentDecode(pieces.getOrNull(0).orEmpty()).trim(),
             message = pieces.getOrNull(1)
         )
     }
@@ -420,7 +425,7 @@ object QrTypeDetector {
         val pieces = body.split(':', limit = 2)
         return QrContent.Sms(
             raw = raw,
-            number = Uri.decode(pieces.getOrNull(0).orEmpty()).trim(),
+            number = percentDecode(pieces.getOrNull(0).orEmpty()).trim(),
             message = pieces.getOrNull(1)
         )
     }
@@ -469,11 +474,64 @@ object QrTypeDetector {
             if (eq > 0) {
                 val k = kv.substring(0, eq)
                 val v = kv.substring(eq + 1)
-                result[k] = Uri.decode(v)
+                result[k] = percentDecode(v)
             } else if (kv.isNotEmpty()) {
                 result[kv] = ""
             }
         }
         return result
+    }
+
+    /**
+     * Minimal RFC 3986 percent-decoder. Mirrors android.net.Uri.decode()
+     * behavior:
+     *   - '+' is preserved as '+' (NOT converted to space — that's
+     *     application/x-www-form-urlencoded, which is different from URI-decode).
+     *   - Multi-byte UTF-8 sequences (e.g. %C3%A9 → é) are decoded correctly
+     *     by collecting decoded bytes into a buffer and converting them as
+     *     UTF-8 at the end. This works because UTF-8 is self-synchronizing:
+     *     ASCII literal chars (0x00-0x7F) appear as themselves in the byte
+     *     stream, and multi-byte sequences are distinguished by their leading
+     *     byte (0xC0+).
+     *
+     * Implemented here (rather than using android.net.Uri) so the parser can
+     * be unit-tested on plain JVM without Robolectric.
+     *
+     * Malformed sequences (incomplete '%' or non-hex digits) are passed through
+     * literally — same behavior as Uri.decode().
+     */
+    internal fun percentDecode(s: String): String {
+        if (s.isEmpty() || '%' !in s) return s
+        val out = java.io.ByteArrayOutputStream(s.length)
+        var i = 0
+        while (i < s.length) {
+            val c = s[i]
+            // Need at least 2 chars after '%' to read the hex pair.
+            if (c == '%' && i + 2 < s.length) {
+                val hi = s[i + 1].hexDigitOrNull()
+                val lo = s[i + 2].hexDigitOrNull()
+                if (hi != null && lo != null) {
+                    // Write the decoded BYTE — multi-byte UTF-8 sequences will
+                    // accumulate in the buffer and be decoded together when we
+                    // convert to String below.
+                    out.write((hi shl 4) or lo)
+                    i += 3
+                    continue
+                }
+            }
+            // Literal char (including literal '%' or '+'): encode as UTF-8 bytes
+            // and append to the same buffer. ASCII chars are single-byte in UTF-8,
+            // so they mix cleanly with the percent-decoded bytes above.
+            out.write(c.toString().toByteArray(charset("UTF-8")))
+            i++
+        }
+        return out.toString("UTF-8")
+    }
+
+    private fun Char.hexDigitOrNull(): Int? = when (this) {
+        in '0'..'9' -> this - '0'
+        in 'a'..'f' -> this - 'a' + 10
+        in 'A'..'F' -> this - 'A' + 10
+        else -> null
     }
 }

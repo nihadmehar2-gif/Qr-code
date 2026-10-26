@@ -2,32 +2,52 @@ package com.nihadmehar.qrscanner.util
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ImageFormat
 import android.media.Image
 import android.net.Uri
 import android.content.Context
-import androidx.annotation.OptIn
-import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.nio.ByteBuffer
 import kotlin.coroutines.resume
 
 /**
- * Wrapper around ML Kit Barcode Scanning for both gallery images (Bitmap) and
- * live camera frames (YUV_420_888 [Image] — converted to a fast greyscale Bitmap,
- * or fed directly to ML Kit via InputImage.fromByteArray for the highest throughput).
+ * Wrapper around ML Kit Barcode Scanning for camera frames ([ImageProxy] from
+ * CameraX's ImageAnalysis) and gallery images (Bitmap).
  *
  * All detection is **on-device** — no image data is ever sent to a server.
  *
- * The previous implementation created a NEW BarcodeScanner per call, which on
- * real devices costs 50–100ms of object construction + JNI handshaking per frame.
- * This rewrite caches a single scanner for the lifetime of the singleton and
- * reuses it across frames and gallery scans, giving us roughly 5–10× higher
- * scan throughput on the same hardware.
+ * ## Image pipeline (correct as of v1.0.3)
+ *
+ * For live camera frames we use [InputImage.fromMediaImage], which is the
+ * official ML Kit API for CameraX. ML Kit reads the YUV_420_888 planes itself
+ * and handles stride padding + rotation correctly — we never touch the byte
+ * layout ourselves.
+ *
+ * The ImageProxy must remain alive until ML Kit's async Task completes, so
+ * [decodeImageProxy] takes ownership of closing the proxy. It closes the proxy
+ * in a `finally` block so the close happens on success, failure, AND coroutine
+ * cancellation.
+ *
+ * ### Why NOT to use InputImage.fromByteArray with IMAGE_FORMAT_NV21
+ *
+ * The previous implementation tried to skip ML Kit's plane extraction by
+ * copying the Y plane only and passing it as NV21. This was incorrect:
+ *
+ *  - NV21 format requires width × height × 1.5 bytes (Y plane + interleaved
+ *    V/U chroma plane, both V and U downsampled 2× horizontally and vertically).
+ *  - We passed only width × height bytes (Y only). ML Kit read past the buffer
+ *    end looking for chroma data → either IndexOutOfBoundsException, silent
+ *    detection failure, or garbage UV interpreted as edge artifacts that confused
+ *    the detector.
+ *  - There is no "greyscale NV21" — the format contract requires the chroma
+ *    bytes to be present, even if they're zeros.
+ *
+ * Using [InputImage.fromMediaImage] sidesteps all of this: ML Kit handles
+ * the YUV_420_888 → internal format conversion itself, with full access to
+ * the U and V planes via the Image's planes[] array.
  */
 object QrDecoder {
 
@@ -56,92 +76,67 @@ object QrDecoder {
      *
      * ML Kit's BarcodeScanner is thread-safe and intended to be reused — the
      * docs explicitly say "an instance of a scanner can be used across multiple
-     * invocations of process". Creating one per frame is wasteful.
+     * invocations of process". Creating one per frame was wasteful (50-100ms
+     * of object construction + JNI handshaking per call).
      */
     private val scanner by lazy { BarcodeScanning.getClient(options) }
 
-    /** Returns the raw string of the first detected barcode, or null if none. */
+    /**
+     * Decode a CameraX [ImageProxy] using ML Kit's documented
+     * `InputImage.fromMediaImage` API.
+     *
+     * OWNERSHIP: this function takes ownership of [imageProxy] and guarantees
+     * it is closed via a `finally` block. Callers MUST NOT close the proxy
+     * themselves — passing a closed proxy will throw on the ML Kit call.
+     *
+     * THREADING: can be called from any thread. ML Kit runs its scan on its own
+     * executor; the suspend function returns when ML Kit's Task completes.
+     *
+     * LIFECYCLE: if the calling coroutine is cancelled while ML Kit is still
+     * processing, the proxy is still closed (via the finally block) and the
+     * caller's continuation is resumed with null.
+     *
+     * @return the raw value of the first detected barcode, or null if no code
+     *         was found OR if any error occurred.
+     */
+    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
+    suspend fun decodeImageProxy(imageProxy: ImageProxy): String? {
+        val mediaImage: Image = imageProxy.image ?: run {
+            imageProxy.close()
+            return null
+        }
+        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+        // ML Kit's InputImage.fromMediaImage holds a REFERENCE to the Image —
+        // it does NOT copy the bytes. The Image (and its parent ImageProxy)
+        // must remain alive until ML Kit's process() Task completes.
+        val inputImage = InputImage.fromMediaImage(mediaImage, rotationDegrees)
+        return try {
+            val barcodes = scanner.processImageAwait(inputImage)
+            barcodes.firstOrNull()?.rawValue
+        } catch (e: Exception) {
+            // CancellationException is re-thrown by suspendCancellableCoroutine
+            // (we don't swallow it) — the finally block still runs and closes
+            // the proxy. Any other exception is treated as a decode failure.
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            null
+        } finally {
+            // ALWAYS close the proxy — success, failure, or cancellation.
+            // Without this, CameraX's ImageAnalysis backpressure strategy
+            // would block forever waiting for the next frame slot.
+            imageProxy.close()
+        }
+    }
+
+    /** Returns the raw string of the first detected barcode in a Bitmap, or null. */
     suspend fun decodeBitmap(bitmap: Bitmap, rotation: Int = 0): String? {
         val image = InputImage.fromBitmap(bitmap, rotation)
         return try {
             val barcodes = scanner.processImageAwait(image)
             barcodes.firstOrNull()?.rawValue
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             null
         }
-    }
-
-    /**
-     * Snapshot of a YUV_420_888 image's Y plane + dimensions, detached from the
-     * CameraX [Image] (so it's safe to read from any thread).
-     *
-     * We only copy the Y plane because QR/barcode detection is high-contrast
-     * black-and-white — the U/V chroma planes don't help ML Kit find a code,
-     * and skipping them halves the byte count we have to copy per frame.
-     */
-    data class YuvSnapshot(
-        val yBytes: ByteArray,
-        val width: Int,
-        val height: Int,
-        val rowStride: Int,
-        val pixelStride: Int
-    )
-
-    /**
-     * Copy the Y plane of a [Image] into a detached [YuvSnapshot] that's safe
-     * to pass across threads. MUST be called on the analyzer thread (CameraX
-     * owns the Image's buffers).
-     *
-     * Returns null when the image format is unexpected.
-     */
-    @OptIn(ExperimentalGetImage::class)
-    fun copyYuvBytes(image: Image): YuvSnapshot? {
-        if (image.format != ImageFormat.YUV_420_888) return null
-        val yPlane = image.planes[0]
-        val yBuffer = yPlane.buffer
-        val rowStride = yPlane.rowStride
-        val pixelStride = yPlane.pixelStride
-        val width = image.width
-        val height = image.height
-        // Allocate one byte per pixel even with padding — we'll read row-by-row.
-        // Use the buffer's remaining size to avoid under-allocating on devices
-        // where the last row has trailing padding.
-        val bytes = ByteArray(yBuffer.remaining())
-        yBuffer.rewind()
-        yBuffer.get(bytes)
-        return YuvSnapshot(bytes, width, height, rowStride, pixelStride)
-    }
-
-    /**
-     * Decode a [YuvSnapshot] (produced by [copyYuvBytes]) using ML Kit.
-     * Tries the fast path (InputImage.fromByteArray with NV21 layout) first;
-     * falls back to a Bitmap conversion when the Y plane has padding.
-     */
-    suspend fun decodeYuvBytes(snapshot: YuvSnapshot, rotationDegrees: Int): String? {
-        val (yBytes, width, height, rowStride, pixelStride) = snapshot
-
-        // Fast path: Y plane is contiguous (pixelStride == 1, rowStride == width)
-        // ML Kit accepts NV21 byte arrays. Since we only have Y (no UV), we
-        // synthesize a "fake NV21" with zero-length UV — ML Kit will treat
-        // the image as greyscale internally.
-        if (pixelStride == 1 && rowStride == width) {
-            val inputImage = InputImage.fromByteArray(
-                yBytes,
-                width,
-                height,
-                rotationDegrees,
-                InputImage.IMAGE_FORMAT_NV21
-            )
-            return try {
-                val barcodes = scanner.processImageAwait(inputImage)
-                barcodes.firstOrNull()?.rawValue
-            } catch (e: Exception) {
-                null
-            }
-        }
-        // Fallback: build a greyscale Bitmap (slower, but handles padding).
-        val bmp = ImageConvertHelper.toBitmapFromY(snapshot) ?: return null
-        return decodeBitmap(bmp, rotationDegrees)
     }
 
     /** Returns the raw string of the first detected barcode in a content Uri image. */

@@ -12,8 +12,8 @@ android {
         applicationId = "com.nihadmehar.qrscanner"
         minSdk = 23
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -112,4 +112,7 @@ dependencies {
 
     // Splash screen
     implementation("androidx.core:core-splashscreen:1.0.1")
+
+    // Unit tests (plain JVM — QrTypeDetector is pure Kotlin, no Android deps)
+    testImplementation("junit:junit:4.13.2")
 }
