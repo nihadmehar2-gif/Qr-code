@@ -61,7 +61,12 @@ class ResultBottomSheet : BottomSheetDialogFragment() {
 
         binding.btnClose.setOnClickListener { dismiss() }
         binding.btnShareAll.setOnClickListener {
-            IntentHelper.shareText(requireContext(), content.typeLabelRes.toString(), content.raw)
+            // Use the localized label string (e.g. "Wi-Fi", "URL"), not the
+            // raw resource ID integer. The previous code passed
+            // content.typeLabelRes.toString() which produced nonsense subjects
+            // like "2131099648" in the share sheet.
+            val label = getString(content.typeLabelRes)
+            IntentHelper.shareText(requireContext(), label, content.raw)
         }
         binding.btnScanAgain.setOnClickListener { dismiss() }
     }

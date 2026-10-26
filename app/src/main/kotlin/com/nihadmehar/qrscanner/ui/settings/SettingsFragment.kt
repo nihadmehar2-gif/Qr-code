@@ -61,7 +61,13 @@ class SettingsFragment : Fragment() {
             }
         }
 
-        binding.tvVersion.text = "1.0.0"
+        binding.tvVersion.text = try {
+            val pkg = requireContext().packageManager
+                .getPackageInfo(requireContext().packageName, 0)
+            "${pkg.versionName} (${if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) pkg.longVersionCode else pkg.versionCode})"
+        } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+            "1.0.1"
+        }
     }
 
     private fun showThemePicker() {

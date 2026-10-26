@@ -111,5 +111,22 @@
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="barcode" />
+
+        <!--
+            FileProvider used by the QR Generator's Share button.
+            We write the generated QR PNG to a private cache file
+            (cacheDir/shared_qr/qr_share_<timestamp>.png) and expose it via this
+            provider so other apps (WhatsApp, Gmail, etc.) can read it without
+            needing WRITE_EXTERNAL_STORAGE permission.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
     </application>
 </manifest>

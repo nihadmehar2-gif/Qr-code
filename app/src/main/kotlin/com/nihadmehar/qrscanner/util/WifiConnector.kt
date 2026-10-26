@@ -69,27 +69,30 @@ object WifiConnector {
         val specifierBuilder = WifiNetworkSpecifier.Builder()
             .setSsid(wifi.ssid)
 
-        when (wifi.security.uppercase()) {
-            "WEP" -> {
-                val pass = wifi.password ?: ""
-                if (pass.isNotEmpty()) {
-                    specifierBuilder.setWpa2Passphrase(pass) // WEP not supported on Q+; best-effort
-                }
-            }
-            "WPA", "WPA2", "WPA3", "" -> {
-                val pass = wifi.password
-                if (pass.isNullOrEmpty()) {
-                    // Open network
-                } else {
-                    specifierBuilder.setWpa2Passphrase(pass)
-                }
-            }
-            "NOPASS" -> { /* open */ }
-            else -> {
-                val pass = wifi.password
-                if (!pass.isNullOrEmpty()) specifierBuilder.setWpa2Passphrase(pass)
+        // Map QR "T:" value to WifiNetworkSpecifier builder calls.
+        // We handle these cases:
+        //   - "WPA" / "WPA2" / "WPA3" / "" → WPA2 passphrase (or open if no password)
+        //   - "WEP" → best-effort WPA2 (WEP isn't supported on Android 10+;
+        //     we still call setWpa2Passphrase because some routers accept the
+        //     WEP string as a passphrase)
+        //   - "NOPASS" / explicit-empty → open network (no auth set)
+        val securityUpper = wifi.security.uppercase()
+        val pass = wifi.password
+        val isOpenNetwork = securityUpper == "NOPASS" ||
+            (pass.isNullOrEmpty() && (securityUpper.isEmpty() || securityUpper == "WPA" || securityUpper == "WPA2" || securityUpper == "WPA3"))
+
+        if (!isOpenNetwork && !pass.isNullOrEmpty()) {
+            // WPA/WPA2/WPA3 with a password
+            try {
+                specifierBuilder.setWpa2Passphrase(pass)
+            } catch (e: IllegalArgumentException) {
+                // Passphrase too short or contains invalid characters
+                // (e.g. WEP-escaped). Fall back to open — user will be prompted
+                // by the system dialog to enter manually.
             }
         }
+        // Open networks: don't call any setter — WifiNetworkSpecifier.Builder
+        // treats no-security-set as an open network by default.
         if (wifi.hidden) {
             specifierBuilder.setIsHiddenSsid(true)
         }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider paths for the QR Generator's Share feature.
+    We expose only the cache subfolder "shared_qr/" — other apps cannot read
+    arbitrary files from our private storage through this provider.
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path name="shared_qr" path="shared_qr/" />
+</paths>

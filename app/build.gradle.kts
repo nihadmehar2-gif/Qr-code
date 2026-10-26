@@ -12,8 +12,8 @@ android {
         applicationId = "com.nihadmehar.qrscanner"
         minSdk = 23
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -23,10 +23,16 @@ android {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // sign release builds with debug keystore so the APK is installable
+            // (replace with your own release keystore before publishing to Google Play
+            // or the Amazon Appstore — they require a release-signed APK)
             signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             isMinifyEnabled = false
+            // Different applicationId for debug builds so they can be installed
+            // alongside the release build without INSTALL_FAILED_UPDATE_INCOMPATIBLE
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
     }
 

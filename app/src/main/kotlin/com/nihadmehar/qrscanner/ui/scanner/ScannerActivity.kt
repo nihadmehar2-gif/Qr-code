@@ -111,11 +111,17 @@ class ScannerActivity : AppCompatActivity() {
         binding.btnTorch.setOnClickListener { toggleTorch() }
         binding.btnSwitchCamera.setOnClickListener { switchCamera() }
 
-        // Observe the latest parsed QR content from the ViewModel.
+        // Observe scan-result events from the ViewModel.
+        //
+        // We deliberately use a Channel-backed Flow (not a StateFlow) so each event
+        // is consumed exactly once — see ScannerViewModel for the rationale.
+        //
+        // repeatOnLifecycle(STARTED) ensures the collector is cancelled when the
+        // activity stops (e.g. user navigates away) and re-started when it resumes.
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-                viewModel.lastResult.collect { content ->
-                    content?.let { showResultSheet(it) }
+                viewModel.resultEvent.collect { event ->
+                    showResultSheet(event.content)
                 }
             }
         }
@@ -186,35 +192,46 @@ class ScannerActivity : AppCompatActivity() {
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
     private fun processImageProxy(imageProxy: ImageProxy) {
         if (isPausedForResult) {
+            // Already showing a result sheet — drop the frame so we don't
+            // save the same scan to history multiple times.
             imageProxy.close()
             return
         }
         val mediaImage = imageProxy.image
+        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
         if (mediaImage == null) {
             imageProxy.close()
             return
         }
-        // Convert YUV_420_888 to Bitmap using a small helper.
-        val bitmap = ImageConvertHelper.toBitmap(mediaImage)
-        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+
+        // IMPORTANT: CameraX's ImageAnalysis contract requires that we close
+        // imageProxy ourselves, AND that we read the Image's planes on the
+        // analyzer thread (the buffer is owned by this thread). The ML Kit
+        // call itself is async and runs on ML Kit's internal executor, so
+        // we MUST copy the Y-plane bytes out on THIS thread before dispatching
+        // to a background coroutine.
+        //
+        // We do that in QrDecoder.copyYuvBytes() below — it returns a small
+        // data class that holds the byte arrays + dimensions, with NO
+        // references to the original Image. Then we close imageProxy on the
+        // analyzer thread, then launch a background coroutine to feed the
+        // bytes to ML Kit.
+        val yuvData = try {
+            QrDecoder.copyYuvBytes(mediaImage)
+        } catch (e: Exception) {
+            imageProxy.close()
+            return
+        }
         imageProxy.close()
-        if (bitmap == null) return
+
+        if (yuvData == null) return
 
         lifecycleScope.launch(Dispatchers.Default) {
-            val rotated = if (rotationDegrees != 0) {
-                val matrix = android.graphics.Matrix().apply { postRotate(rotationDegrees.toFloat()) }
-                android.graphics.Bitmap.createBitmap(
-                    bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
-                )
-            } else bitmap
-
-            val raw = QrDecoder.decodeBitmap(rotated, 0)
+            val raw = QrDecoder.decodeYuvBytes(yuvData, rotationDegrees)
             if (raw != null) {
                 val parsed = QrTypeDetector.detect(raw)
-                // Drop duplicate consecutive scans of the same content.
-                if (parsed.raw != viewModel.lastRaw) {
-                    viewModel.lastRaw = parsed.raw
-                    withContext(Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
+                    if (!isPausedForResult) {
                         viewModel.publishResult(parsed)
                         runFeedback()
                     }
@@ -297,7 +314,8 @@ class ScannerActivity : AppCompatActivity() {
                     showNoQrInImageDialog()
                 } else {
                     val parsed = QrTypeDetector.detect(raw)
-                    viewModel.lastRaw = parsed.raw
+                    // Gallery scan: always publish — even if the same code was just scanned
+                    // via the camera, the user explicitly asked us to decode this image.
                     viewModel.publishResult(parsed)
                 }
             }
@@ -305,16 +323,33 @@ class ScannerActivity : AppCompatActivity() {
     }
 
     private fun showResultSheet(content: QrContent) {
+        // Guard against the (rare) race where two scan-result events land on the
+        // main thread back-to-back before isPausedForResult is flipped to true.
+        // Without this guard, the second sheet.show() call would throw
+        // IllegalStateException: "Fragment already added".
+        val fm = supportFragmentManager
+        if (fm.findFragmentByTag(ResultBottomSheet.TAG) != null) {
+            // A sheet is already on screen — drop this duplicate event.
+            return
+        }
         isPausedForResult = true
+        // Persist to history off the main thread so the sheet can appear immediately.
+        // Use a separate launch so a slow DB write can't block the sheet's animation.
         lifecycleScope.launch {
-            val s = SettingsManager.get(this@ScannerActivity)
-            if (s.saveHistory) {
-                historyRepository.insert(content)
+            try {
+                val s = SettingsManager.get(this@ScannerActivity)
+                if (s.saveHistory) {
+                    historyRepository.insert(content)
+                }
+            } catch (e: Exception) {
+                // Database write failed — don't crash the UI. The user still gets
+                // the result sheet; they just won't see it in history.
+                android.util.Log.w("ScannerActivity", "history insert failed", e)
             }
         }
         val sheet = ResultBottomSheet.newInstance(content)
         sheet.onDismiss = { isPausedForResult = false }
-        sheet.show(supportFragmentManager, ResultBottomSheet.TAG)
+        sheet.show(fm, ResultBottomSheet.TAG)
     }
 
     private fun showNoQrInImageDialog() {
@@ -365,9 +400,12 @@ class ScannerActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Stop accepting new image-analysis tasks FIRST, then unbind the camera.
+        // Without shutdownNow(), a frame could be queued for analysis after
+        // cameraProvider.unbindAll() runs and crash with RejectedExecutionException.
         boundCamera = null
         cameraProvider?.unbindAll()
-        analysisExecutor.shutdown()
+        analysisExecutor.shutdownNow()
     }
 
     companion object {

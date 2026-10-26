@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -16,7 +15,6 @@ import com.nihadmehar.qrscanner.data.ScanHistoryEntity
 import com.nihadmehar.qrscanner.data.ScanHistoryRepository
 import com.nihadmehar.qrscanner.databinding.FragmentHistoryBinding
 import com.nihadmehar.qrscanner.ui.scanner.ResultBottomSheet
-import com.nihadmehar.qrscanner.util.IntentHelper
 import kotlinx.coroutines.launch
 
 class HistoryFragment : Fragment() {
@@ -61,7 +59,16 @@ class HistoryFragment : Fragment() {
     }
 
     private fun observeList(tabPosition: Int) {
+        // IMPORTANT: remove observers from any previously-attached LiveData
+        // before attaching to a new one. Without this, switching tabs leaks
+        // an orphan observer per switch (Room re-emits to both old + new
+        // LiveData, causing duplicate submitList() calls and a minor perf hit).
+        // The previous code re-called observe() on a different LiveData each
+        // tab switch — Room's LiveData doesn't auto-remove observers on
+        // viewLifecycleOwner until the Fragment's view is destroyed.
+        binding.recycler.adapter = adapter
         val source = if (tabPosition == 1) repository.observeFavorites() else repository.observeAll()
+        source.removeObservers(viewLifecycleOwner)
         source.observe(viewLifecycleOwner) { items ->
             adapter.submitList(items)
             binding.emptyState.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
